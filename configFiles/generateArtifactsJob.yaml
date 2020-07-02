@@ -1,0 +1,49 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: utils
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      name: utils
+    spec:
+      restartPolicy: "Never"
+      volumes:
+      - name: sharedvolume
+        persistentVolumeClaim:
+          claimName: shared-pvc
+      - name: dockersocket
+        hostPath:
+          path: /var/run/docker.sock
+      containers:
+      - name: cryptogen
+        image: hyperledger/fabric-tools:2.1
+        imagePullPolicy: IfNotPresent
+        command: ["sh", "-c", "
+        echo 'Cryptogen Starts'; 
+        ls -l /shared/artifacts; 
+        while [ ! -d /shared/artifacts ]; 
+          do echo Waiting for configFiles; 
+          sleep 1; 
+        done; 
+        for file in $(find /shared/ -iname *_sk); 
+          do echo $file; 
+          dir=$(dirname $file); 
+          echo ${dir}; 
+          mv ${dir}/*_sk ${dir}/key.pem; 
+        done 
+        && 
+        find /shared -type d | xargs chmod a+rx 
+        && 
+        find /shared -type f | xargs chmod a+r 
+        && 
+        touch /shared/status_cryptogen_complete 
+        && 
+        touch /shared/status_configtxgen_complete;
+        "]
+        volumeMounts:
+        - mountPath: /shared
+          name: sharedvolume
+          

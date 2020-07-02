@@ -1,0 +1,59 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fabrc-cli
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: cli
+  template:
+    metadata:
+      labels:
+        name: cli
+    spec:
+      volumes:
+      - name: sharedvolume
+        persistentVolumeClaim:
+          claimName: shared-pvc
+
+      containers:
+        - name: chaincodepackage
+          image: hyperledger/fabric-tools:2.1
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "
+          while :; do sleep 10; done
+          "]
+          env:
+          - name: CHAINCODE_NAME
+            value: "fabcar"
+          - name: CHAINCODE_VERSION
+            value: "1"
+          - name: CHANNEL_NAME
+            value: channel1
+          - name: ORDERER_URL
+            value: fabrc-orderer:31010
+          - name: ORDERER_CA
+            value: /shared/artifacts/crypto-config/ordererOrganizations/example.com/orderers/fabrc-orderer/msp/tlscacerts/tlsca.example.com-cert.pem
+          - name: FABRIC_CFG_PATH
+            value: /etc/hyperledger/fabric
+          - name: GODEBUG
+            value: "netdns=go"
+          - name: CORE_PEER_MSPCONFIGPATH
+            value: /shared/artifacts/crypto-config/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+          - name: CORE_PEER_TLS_ENABLED
+            value: "true"
+          - name: CORE_PEER_TLS_CERT_FILE
+            value: /shared/artifacts/crypto-config/peerOrganizations/org1.example.com/peers/fabrc-org1peer1/tls/server.crt
+          - name: CORE_PEER_TLS_KEY_FILE
+            value: /shared/artifacts/crypto-config/peerOrganizations/org1.example.com/peers/fabrc-org1peer1/tls/server.key
+          - name: CORE_PEER_TLS_ROOTCERT_FILE
+            value: /shared/artifacts/crypto-config/peerOrganizations/org1.example.com/peers/fabrc-org1peer1/tls/ca.crt
+          - name: CORE_PEER_LOCALMSPID
+            value: Org1MSP
+          - name: CORE_PEER_ADDRESS
+            value: fabrc-org1peer1:30110
+          volumeMounts:
+          - mountPath: /shared
+            name: sharedvolume
